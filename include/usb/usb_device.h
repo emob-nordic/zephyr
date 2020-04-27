@@ -112,6 +112,9 @@ typedef void (*usb_ep_callback)(u8_t ep,
  * For device to host class requests, 'len' and 'payload_data' should be
  * set by the callback function with the length and the address of the
  * data to be transmitted buffer respectively.
+ *
+ * @return 0 on success, positive value if request is intended to be handled
+ *	   by the core USB stack. Negative error code on fail.
  */
 typedef int (*usb_request_handler)(struct usb_setup_packet *setup,
 				   s32_t *transfer_len, u8_t **payload_data);

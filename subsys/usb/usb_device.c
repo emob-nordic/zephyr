@@ -1226,9 +1226,7 @@ static int custom_handler(struct usb_setup_packet *pSetup,
 			continue;
 		}
 
-		if ((iface->custom_handler) &&
-		    (if_descr->bInterfaceNumber ==
-		     sys_le16_to_cpu(pSetup->wIndex))) {
+		if (iface->custom_handler) {
 			return iface->custom_handler(pSetup, len, data);
 		}
 	}
