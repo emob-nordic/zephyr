@@ -143,19 +143,19 @@ static struct usb_ep_cfg_data dev##_usb_audio_ep_data_##i[] = {		  \
 	INIT_EP_DATA(audio_receive_cb, AUTO_EP_OUT),			  \
 }
 
-#define DEFINE_AUDIO_DEV_DATA(dev, i, __out_pool, __in_pool_size)	\
-	struct usb_audio_features dev##_ctrls_##i[CH_CNT(dev, i) + 1];	\
-	static struct usb_audio_dev_data_t dev##_audio_dev_data_##i =	\
-		{ .controls = {dev##_ctrls_##i, NULL},			\
-		  .pool = __out_pool,					\
+#define DEFINE_AUDIO_DEV_DATA(dev, i, __out_pool, __in_pool_size)	     \
+	static struct usb_audio_features dev##_ctrls_##i[CH_CNT(dev, i) + 1];\
+	static struct usb_audio_dev_data_t dev##_audio_dev_data_##i =	     \
+		{ .controls = {dev##_ctrls_##i, NULL},			     \
+		  .pool = __out_pool,					     \
 		  .in_frame_size = __in_pool_size }
 
-#define DEFINE_AUDIO_DEV_DATA_BIDIR(dev, i, __out_pool, __in_pool_size)	\
-	struct usb_audio_features dev##_ctrls0_##i[CH_CNT(dev, i) + 1];	\
-	struct usb_audio_features dev##_ctrls1_##i[CH_CNT(dev, i) + 1];	\
-	static struct usb_audio_dev_data_t dev##_audio_dev_data_##i =	\
-		{ .controls = {dev##_ctrls0_##i, dev##_ctrls1_##i},	\
-		  .pool = __out_pool,					\
+#define DEFINE_AUDIO_DEV_DATA_BIDIR(dev, i, __out_pool, __in_pool_size)	      \
+	static struct usb_audio_features dev##_ctrls0_##i[CH_CNT(dev, i) + 1];\
+	static struct usb_audio_features dev##_ctrls1_##i[CH_CNT(dev, i) + 1];\
+	static struct usb_audio_dev_data_t dev##_audio_dev_data_##i =	      \
+		{ .controls = {dev##_ctrls0_##i, dev##_ctrls1_##i},	      \
+		  .pool = __out_pool,					      \
 		  .in_frame_size = __in_pool_size }
 
 /**
@@ -179,7 +179,7 @@ static u16_t get_controls(struct feature_unit_descriptor *fu)
 /**
  * Helper function for getting the device streaming direction
  */
-enum usb_audio_direction get_fu_dir(struct feature_unit_descriptor *fu)
+static enum usb_audio_direction get_fu_dir(struct feature_unit_descriptor *fu)
 {
 	struct output_terminal_descriptor *ot  =
 	(struct output_terminal_descriptor *)((u8_t *)fu + fu->bLength);
@@ -230,8 +230,8 @@ static void fix_fu_descriptors(struct usb_if_descriptor *iface)
  * This is needed in order to address audio specific requests to proper
  * controls struct.
  */
-int get_feature_unit(struct usb_audio_dev_data_t *audio_dev_data,
-		     struct feature_unit_descriptor **fu, u8_t fu_id)
+static int get_feature_unit(struct usb_audio_dev_data_t *audio_dev_data,
+			    struct feature_unit_descriptor **fu, u8_t fu_id)
 {
 	*fu = (struct feature_unit_descriptor *)
 		((u8_t *)audio_dev_data->header_descr +
@@ -254,8 +254,8 @@ int get_feature_unit(struct usb_audio_dev_data_t *audio_dev_data,
  * @brief This is a helper function user to inform the user about
  * possibility to write the data to the device.
  */
-void audio_dc_sof(struct usb_cfg_data *cfg,
-		  struct usb_audio_dev_data_t *dev_data)
+static void audio_dc_sof(struct usb_cfg_data *cfg,
+			 struct usb_audio_dev_data_t *dev_data)
 {
 	u8_t ep_addr;
 
@@ -314,7 +314,7 @@ static void audio_interface_config(struct usb_desc_header *head,
 	}
 }
 
-void audio_cb_usb_status(struct usb_cfg_data *cfg,
+static void audio_cb_usb_status(struct usb_cfg_data *cfg,
 			 enum usb_dc_status_code cb_status,
 			 const u8_t *param)
 {
@@ -750,8 +750,8 @@ static int audio_custom_handler(struct usb_setup_packet *pSetup,
  *
  * @return  0 on success, negative errno code on fail.
  */
-int audio_class_handle_req(struct usb_setup_packet *pSetup,
-			   s32_t *len, u8_t **data)
+static int audio_class_handle_req(struct usb_setup_packet *pSetup,
+				  s32_t *len, u8_t **data)
 {
 	LOG_INF("bmRequestType 0x%02x, bRequest 0x%02x, wValue 0x%04x,"
 		"wIndex 0x%04x, wLength 0x%04x",
@@ -843,7 +843,7 @@ size_t usb_audio_get_in_frame_size(const struct device *dev)
 	return audio_dev_data->in_frame_size;
 }
 
-void audio_receive_cb(u8_t ep, enum usb_dc_ep_cb_status_code status)
+static void audio_receive_cb(u8_t ep, enum usb_dc_ep_cb_status_code status)
 {
 	struct usb_audio_dev_data_t *audio_dev_data;
 	struct usb_dev_data *common;
