@@ -164,7 +164,8 @@ typedef void (*usb_audio_data_request_cb_t)(const struct device *dev);
  *
  * @param dev	 The device for which the callback was called.
  * @param buffer Pointer to the net_buf data chunk that was successfully
- *		 send/received.
+ *		 send/received. If application does not specify the callback
+ *		 the buffer would be automatically freed.
  * @param size	 Amount of data that were successfully send/received.
  */
 typedef void (*usb_audio_data_completion_cb_t)(const struct device *dev,
@@ -249,9 +250,8 @@ void usb_audio_register(struct device *dev,
  * @param buffer Pointer to the buffer that should be send. User is
  *		 responsible for managing the buffer for Input devices.
  *		 In case of sending error user must decide if buffer
- *		 should be dropped or retransmitted. Buffer is automatically
- *		 freed when successfully send.
- *		 User must providing proper net_buf chunk especially when
+ *		 should be dropped or retransmitted.
+ *		 User must provide proper net_buf chunk especially when
  *		 it comes to its size. This information can be obtained
  *		 using usb_audio_get_in_frame_size() API function.
  *

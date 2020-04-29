@@ -784,12 +784,16 @@ static void audio_write_cb(u8_t ep, int size, void *priv)
 	LOG_DBG("Written %d bytes on ep 0x%02x, *audio_dev_data %p",
 		size, ep, audio_dev_data);
 
-	/* Release net_buf back to the pool */
-	net_buf_unref(buffer);
-
-	/* Call user callback if user registered one */
+	/* Ask installed callback to process the data.
+	 * User is responsible for freeing the buffer.
+	 * In case no callback is installed free the buffer.
+	 */
 	if (audio_dev_data->ops && audio_dev_data->ops->data_written_cb) {
-		audio_dev_data->ops->data_written_cb(dev_data->dev, NULL, size);
+		audio_dev_data->ops->data_written_cb(dev_data->dev,
+						     buffer, size);
+	} else {
+		/* Release net_buf back to the pool */
+		net_buf_unref(buffer);
 	}
 }
 
@@ -884,6 +888,7 @@ static void audio_receive_cb(u8_t ep, enum usb_dc_ep_cb_status_code status)
 		audio_dev_data->ops->data_received_cb(common->dev,
 						      buffer, ret_bytes);
 	} else {
+		/* Release net_buf back to the pool */
 		net_buf_unref(buffer);
 	}
 }
