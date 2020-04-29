@@ -364,7 +364,7 @@ static bool is_entity_valid(struct usb_audio_dev_data_t *audio_dev_data,
 			    struct usb_audio_entity *entity)
 {
 	const struct cs_ac_interface_descriptor_header *header;
-	struct feature_unit_descriptor *fu;
+	const struct feature_unit_descriptor *fu;
 
 	header = audio_dev_data->header_descr;
 	fu = (struct feature_unit_descriptor *)((u8_t *)header +
