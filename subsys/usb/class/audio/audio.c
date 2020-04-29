@@ -862,8 +862,8 @@ static void audio_receive_cb(u8_t ep, enum usb_dc_ep_cb_status_code status)
 				      struct usb_audio_dev_data_t,
 				      common);
 
-	/** Check is as_active interface is active
-	 * If no -> no sense to read data and return from callback
+	/** Check if active audiostreaming interface is selected
+	 * If no there is no point to read the data. Return from callback
 	 */
 	if (!audio_dev_data->rx_enable) {
 		return;
@@ -887,9 +887,16 @@ static void audio_receive_cb(u8_t ep, enum usb_dc_ep_cb_status_code status)
 		net_buf_unref(buffer);
 		return;
 	}
+
+	/* Ask installed callback to process the data.
+	 * User is responsible for freeing the buffer.
+	 * In case no callback is installed free the buffer.
+	 */
 	if (audio_dev_data->ops && audio_dev_data->ops->data_received_cb) {
 		audio_dev_data->ops->data_received_cb(common->dev,
 						      buffer, ret_bytes);
+	} else {
+		net_buf_unref(buffer);
 	}
 }
 
