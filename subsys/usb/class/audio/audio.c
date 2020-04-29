@@ -558,9 +558,8 @@ static int handle_feature_unit_req(struct usb_audio_dev_data_t *audio_dev_data,
 		case USB_AUDIO_FU_DELAY_CONTROL:
 		case USB_AUDIO_FU_BASS_BOOST_CONTROL:
 		case USB_AUDIO_FU_LOUDNESS_CONTROL:
-			break;
 		default:
-			break;
+			ret = -ENOTSUP;
 		}
 	}
 
