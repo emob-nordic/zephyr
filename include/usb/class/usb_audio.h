@@ -213,25 +213,6 @@ struct usb_audio_ops {
 	usb_audio_feature_updated_cb_t feature_update_cb;
 };
 
-/** USB Audio device controls
- *
- * This structure present the structure of possible features that USB audio
- * device may support. Enabling features is done via DT overlay.
- */
-struct usb_audio_features {
-	bool  mute;
-	u16_t volume;
-	u8_t  tone_control[3];
-	/* Left for time being as u8_t
-	 * check Table 5-27 audio10.pdf
-	 */
-	u8_t  graphic_equalizer;
-	bool  automatic_gain_control;
-	u16_t delay;
-	bool  bass_boost;
-	bool  loudness;
-};
-
 /** @brief Get the frame size that is accepted by the Host.
  *
  * This function returns the frame size for Input Devices that is expected
