@@ -452,7 +452,8 @@ struct dev##_descriptor_##i {						\
 }
 
 /** Class-Specific AS Format Type Descriptor 4.5.3 audio10.pdf
- * TODO: bFormatType
+ *  For more information refer to 2.2.5 Type I Format Type Descriptor
+ *  from frmts10.pdf
  */
 #define INIT_AS_FORMAT_I(ch_cnt, res)				\
 {								\
