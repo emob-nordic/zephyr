@@ -528,9 +528,8 @@ static int handle_feature_unit_req(struct usb_audio_dev_data_t *audio_dev_data,
 		case USB_AUDIO_FU_MUTE_CONTROL:
 			switch (pSetup->bRequest) {
 			case USB_AUDIO_SET_CUR:
-				memcpy(&audio_dev_data->controls[device][ch].mute,
-					(*data + data_offset),
-					sizeof(bool));
+				audio_dev_data->controls[device][ch].mute =
+						((*data)[data_offset] != 0);
 				/* Inform the user APP by callback */
 				if (audio_dev_data->ops->feature_update_cb &&
 				    audio_dev_data->ops) {
@@ -542,9 +541,7 @@ static int handle_feature_unit_req(struct usb_audio_dev_data_t *audio_dev_data,
 				ret = 0;
 				break;
 			case USB_AUDIO_GET_CUR:
-				memcpy(&tmp_data_ptr[data_offset],
-					(u8_t *)&audio_dev_data->controls[device][ch].mute,
-					sizeof(bool));
+				tmp_data_ptr[data_offset] = (audio_dev_data->controls[device][ch].mute != 0);
 				ret = 0;
 				break;
 			default:
