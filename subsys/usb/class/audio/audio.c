@@ -760,21 +760,13 @@ static int audio_class_handle_req(struct usb_setup_packet *pSetup,
 
 	switch (REQTYPE_GET_RECIP(pSetup->bmRequestType)) {
 	case REQTYPE_RECIP_INTERFACE:
-		if (handle_interface_req(pSetup, len, data) < 0) {
-			return -1;
-		}
-		break;
+		return handle_interface_req(pSetup, len, data);
 	case REQTYPE_RECIP_ENDPOINT:
-		if (handle_endpoint_req(pSetup, len, data) < 0) {
-			return -1;
-		}
-		break;
+		return handle_endpoint_req(pSetup, len, data);
 	default:
 		LOG_ERR("Request receipent invalid");
 		return -1;
 	}
-
-	return 0;
 }
 
 static int usb_audio_device_init(struct device *dev)
