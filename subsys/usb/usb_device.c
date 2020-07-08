@@ -805,6 +805,11 @@ static bool usb_handle_std_interface_req(struct usb_setup_packet *setup,
 					 int32_t *len, uint8_t **data_buf)
 {
 	uint8_t *data = *data_buf;
+	size_t size = (__usb_data_end - __usb_data_start);
+	struct usb_cfg_data *cfg = NULL;
+	const struct usb_if_descriptor *if_descr = NULL;
+	uint8_t interface_number = 0xFF;
+	uint8_t alt_setting = 0xFF;
 
 	switch (setup->bRequest) {
 	case REQ_GET_STATUS:
@@ -824,13 +829,41 @@ static bool usb_handle_std_interface_req(struct usb_setup_packet *setup,
 		 * Zero must be returned for all interfaces that do not have
 		 * alternate settings.
 		 */
-		data[0] = 0U;
-		*len = 1;
+		interface_number = (uint8_t)setup->wIndex;
+
+		for (size_t i = 0; i < size; i++) {
+			cfg = &__usb_data_start[i];
+			for (int j = 0; j < cfg->num_interfaces; j++) {
+				if_descr = cfg->interfaces[j].iface;
+				if (if_descr->bInterfaceNumber ==
+				    interface_number) {
+					data[0] = cfg->interfaces[j].curr_alt;
+					*len = 1;
+				}
+			}
+		}
+
+		// data[0] = 0U;
+		// *len = 1;
 		break;
 
 	case REQ_SET_INTERFACE:
+		interface_number = (uint8_t)setup->wIndex;
+		alt_setting = (uint8_t)setup->wValue;
+
 		LOG_DBG("REQ_SET_INTERFACE");
-		usb_set_interface(setup->wIndex, setup->wValue);
+		for (size_t i = 0; i < size; i++) {
+			cfg = &__usb_data_start[i];
+			for (int j = 0; j < cfg->num_interfaces; j++) {
+				if_descr = cfg->interfaces[j].iface;
+				if (if_descr->bInterfaceNumber ==
+				    interface_number) {
+					cfg->interfaces[j].curr_alt = alt_setting;
+				}
+			}
+		}
+
+		usb_set_interface(interface_number, alt_setting);
 		*len = 0;
 		break;
 

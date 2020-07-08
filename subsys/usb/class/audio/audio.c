@@ -42,9 +42,6 @@ struct usb_audio_dev_data {
 
 	/* Not applicable for Headphones, left with 0 */
 	uint16_t in_frame_size;
-
-	bool rx_enable;
-	bool tx_enable;
 };
 
 static sys_slist_t usb_audio_data_devlist;
@@ -307,7 +304,7 @@ static void audio_dc_sof(struct usb_cfg_data *cfg,
 
 	/* In endpoint always at index 0 */
 	ep_addr = cfg->endpoints[0].ep_addr;
-	if ((ep_addr & USB_EP_DIR_MASK) && (dev_data->tx_enable)) {
+	if ((ep_addr & USB_EP_DIR_MASK) && (cfg->interfaces[1].curr_alt)) {
 		if (dev_data->ops && dev_data->ops->data_request_cb) {
 			dev_data->ops->data_request_cb(
 				dev_data->common.dev);
@@ -458,65 +455,6 @@ static struct usb_audio_dev_data *get_audio_dev_data_by_entity(
 					      common);
 
 		if (is_entity_valid(audio_dev_data, entity)) {
-			return audio_dev_data;
-		}
-	}
-	return NULL;
-}
-
-/**
- * @brief Helper funciton for checking if particular interface is a part of
- *	  the audio device.
- *
- * This function checks if given interface is a part of given audio device.
- * If so then true is returned and audio_dev_data is considered correct device
- * data.
- *
- * @param [in] audio_dev_data USB audio device data.
- * @param [in] interface      USB Audio interface number.
- *
- * @return true if interface matched audio_dev_data, false otherwise.
- */
-static bool is_interface_valid(struct usb_audio_dev_data *audio_dev_data,
-			       uint8_t interface)
-{
-	const struct cs_ac_if_descriptor *header;
-
-	header = audio_dev_data->desc_hdr;
-	uint8_t desc_iface = 0;
-
-	for (size_t i = 0; i < header->bInCollection; i++) {
-		desc_iface = header->baInterfaceNr[i];
-		if (desc_iface == interface) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-/**
- * @brief Helper funciton for getting the audio_dev_data by the interface
- *	  number.
- *
- * This function searches through all audio devices the one with given
- * interface number and returns the audio_dev_data structure for this device.
- *
- * @param [in] interface USB Audio interface addressed by the request.
- *
- * @return audio_dev_data for given interface, NULL if not found.
- */
-static struct usb_audio_dev_data *get_audio_dev_data_by_iface(uint8_t interface)
-{
-	struct usb_dev_data *dev_data;
-	struct usb_audio_dev_data *audio_dev_data;
-
-	SYS_SLIST_FOR_EACH_CONTAINER(&usb_audio_data_devlist, dev_data, node) {
-		audio_dev_data = CONTAINER_OF(dev_data,
-					      struct usb_audio_dev_data,
-					      common);
-
-		if (is_interface_valid(audio_dev_data, interface)) {
 			return audio_dev_data;
 		}
 	}
@@ -696,91 +634,6 @@ static int handle_interface_req(struct usb_setup_packet *pSetup,
 }
 
 /**
- * @brief Custom callback for USB Device requests.
- *
- * This callback is called when set/get interface request is directed
- * to the device. This is Zephyr way to address those requests.
- * It's not possible to do that in the core stack as common USB device
- * stack does not know the amount of devices that has alternate interfaces.
- *
- * @param pSetup    Information about the request to execute.
- * @param len       Size of the buffer.
- * @param data      Buffer containing the request result.
- *
- * @return 0 on success, positive value if request is intended to be handled
- *	   by the core USB stack. Negative error code on fail.
- */
-static int audio_custom_handler(struct usb_setup_packet *pSetup, int32_t *len,
-				uint8_t **data)
-{
-	const struct cs_ac_if_descriptor *header;
-	struct usb_audio_dev_data *audio_dev_data;
-	const struct usb_if_descriptor *if_desc;
-	const struct usb_ep_descriptor *ep_desc;
-
-	uint8_t iface = (pSetup->wIndex) & 0xFF;
-
-	audio_dev_data = get_audio_dev_data_by_iface(iface);
-	if (audio_dev_data == NULL) {
-		return -EINVAL;
-	}
-
-	/* Search for endpoint associated to addressed interface
-	 * Endpoint is searched in order to know the direction of
-	 * addressed interface.
-	 */
-	header = audio_dev_data->desc_hdr;
-
-	/* Skip to the first interface */
-	if_desc = (struct usb_if_descriptor *)((uint8_t *)header +
-						header->wTotalLength +
-						USB_PASSIVE_IF_DESC_SIZE);
-
-	if (if_desc->bInterfaceNumber == iface) {
-		ep_desc = (struct usb_ep_descriptor *)((uint8_t *)if_desc +
-						USB_PASSIVE_IF_DESC_SIZE +
-						USB_AC_CS_IF_DESC_SIZE +
-						USB_FORMAT_TYPE_I_DESC_SIZE);
-	} else {
-		/* In case first interface address is not the one addressed
-		 * we can be sure the second one is because
-		 * get_audio_dev_data_by_iface() found the device. It
-		 * must be the second interface associated with the device.
-		 */
-		if_desc = (struct usb_if_descriptor *)((uint8_t *)if_desc +
-						USB_ACTIVE_IF_DESC_SIZE);
-		ep_desc = (struct usb_ep_descriptor *)((uint8_t *)if_desc +
-						USB_PASSIVE_IF_DESC_SIZE +
-						USB_AC_CS_IF_DESC_SIZE +
-						USB_FORMAT_TYPE_I_DESC_SIZE);
-	}
-
-	if (REQTYPE_GET_RECIP(pSetup->bmRequestType) ==
-	    REQTYPE_RECIP_INTERFACE) {
-		switch (pSetup->bRequest) {
-		case REQ_SET_INTERFACE:
-			if (ep_desc->bEndpointAddress & USB_EP_DIR_MASK) {
-				audio_dev_data->tx_enable = pSetup->wValue;
-			} else {
-				audio_dev_data->rx_enable = pSetup->wValue;
-			}
-			return -EINVAL;
-		case REQ_GET_INTERFACE:
-			if (ep_desc->bEndpointAddress & USB_EP_DIR_MASK) {
-				*data[0] = audio_dev_data->tx_enable;
-			} else {
-				*data[0] = audio_dev_data->rx_enable;
-			}
-			return 0;
-		default:
-			break;
-		}
-	}
-
-	return -ENOTSUP;
-}
-
-/**
  * @brief Handler called for Class requests not handled by the USB stack.
  *
  * @param pSetup    Information about the request to execute.
@@ -840,7 +693,6 @@ static void audio_write_cb(uint8_t ep, int size, void *priv)
 int usb_audio_send(const struct device *dev, struct net_buf *buffer,
 		   size_t len)
 {
-	struct usb_audio_dev_data *audio_dev_data = dev->driver_data;
 	struct usb_cfg_data *cfg = (void *)dev->config_info;
 	/* EP ISO IN is always placed first in the endpoint table */
 	uint8_t ep = cfg->endpoints[0].ep_addr;
@@ -850,7 +702,7 @@ int usb_audio_send(const struct device *dev, struct net_buf *buffer,
 		return -EINVAL;
 	}
 
-	if (!audio_dev_data->tx_enable) {
+	if (!cfg->interfaces[1].curr_alt) {
 		LOG_DBG("sending dropped -> Host chose passive interface");
 		return -EAGAIN;
 	}
@@ -896,9 +748,10 @@ static void audio_receive_cb(uint8_t ep, enum usb_dc_ep_cb_status_code status)
 	/** Check if active audiostreaming interface is selected
 	 * If no there is no point to read the data. Return from callback
 	 */
-	if (!audio_dev_data->rx_enable) {
-		return;
-	}
+	/** TODO: This must distinguish between IN/OUT/INOUT device */
+	// if (!audio_dev_data->rx_enable) {
+	// 	return;
+	// }
 
 	/* Check if application installed callback and process the data.
 	 * In case no callback is installed do not alloc the buffer at all.
@@ -940,8 +793,6 @@ void usb_audio_register(struct device *dev,
 
 	audio_dev_data->ops = ops;
 	audio_dev_data->common.dev = dev;
-	audio_dev_data->rx_enable = false;
-	audio_dev_data->tx_enable = false;
 	audio_dev_data->desc_hdr = header;
 
 	sys_slist_append(&usb_audio_data_devlist, &audio_dev_data->common.node);
@@ -958,7 +809,7 @@ void usb_audio_register(struct device *dev,
 		.cb_usb_status = audio_cb_usb_status,			  \
 		.request_handlers = {					  \
 			.class_handler = audio_class_handle_req,	  \
-			.custom_handler = audio_custom_handler,		  \
+			.custom_handler = NULL,				  \
 			.vendor_handler = NULL,				  \
 		},							  \
 		.num_interfaces = ARRAY_SIZE(dev##_usb_audio_iface_data_##i),\
